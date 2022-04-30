@@ -107,8 +107,7 @@ public final class SegwitAddress {
     // OP_0 -> 0x00, OP_1 -> 0x51, ..., OP_16 -> 0x60
     if ((this.witnessVersion >= 1) && (this.witnessVersion <= 16)) {
       return (byte) (this.witnessVersion + 0x50);
-    } else {
-      return this.witnessVersion;
     }
+    return this.witnessVersion;
   }
 }

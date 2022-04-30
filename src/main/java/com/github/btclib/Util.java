@@ -77,11 +77,11 @@ public final class Util {
   public static int hexToDecimal(final int hex) {
     if ((hex >= '0') && (hex <= '9')) {
       return hex - '0';
-    } else if ((hex >= 'a') && (hex <= 'f')) {
-      return (hex - 'a') + 10;
-    } else {
-      throw new IllegalArgumentException("invalid hex");
     }
+    if ((hex >= 'a') && (hex <= 'f')) {
+      return (hex - 'a') + 10;
+    }
+    throw new IllegalArgumentException("invalid hex");
   }
 
   /**

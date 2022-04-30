@@ -80,7 +80,8 @@ public final class Bech32 {
       bitsAvailable += base;
       while (bitsAvailable >= resultBase) {
         bitsAvailable -= resultBase;
-        result[resultIndex++] = (byte) ((bits >>> bitsAvailable) & resultBaseMask);
+        result[resultIndex] = (byte) ((bits >>> bitsAvailable) & resultBaseMask);
+        resultIndex++;
       }
     }
     // BIP-0173 specific rules - note that this method is intended to be used to invert its prior output
@@ -88,7 +89,8 @@ public final class Bech32 {
     if (bitsAvailable != 0) {
       final int paddedRemainingBits = (bits << (resultBase - bitsAvailable)) & resultBaseMask;
       if (pad) { // save the bits with zero padding
-        result[resultIndex++] = (byte) paddedRemainingBits;
+        result[resultIndex] = (byte) paddedRemainingBits;
+        resultIndex++;
       } else { // successfully discard bits only if they are actually padding bits
         if ((bitsAvailable >= base) || (paddedRemainingBits != 0)) {
           return null;
