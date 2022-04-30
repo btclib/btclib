@@ -29,11 +29,24 @@ public class UtilTest {
     Assert.assertArrayEquals(new byte[] { 0x01, 0x02, 0x01, 0x01, 0x01 }, Util.concat(new byte[] { 0x01, 0x02 }, new byte[] { 0x01 }, new byte[] { 0x01 }, new byte[] { 0x01 }));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void test_fromHexString_negative() {
-    final String[] tests = { null, "a", "A", "AA", "z", "ａａ", "fff" };
-    for (final String test : tests) {
-      Assert.fail(Arrays.toString(Util.fromHexString(test)));
+    final Map<String, String> tests = new LinkedHashMap<>();
+    tests.put(null, null);
+    tests.put("a", null);
+    tests.put("A", null);
+    tests.put("AA", "invalid hex");
+    tests.put("z", null);
+    tests.put("ａａ", "invalid hex");
+    tests.put("fff", null);
+    tests.put("💩", "invalid hex");
+    tests.put(new StringBuilder(4).append("12").appendCodePoint(/* supplementary character PILE OF POO */ 0x1f4a9).toString(), "invalid hex");
+    for (final Map.Entry<String, String> test : tests.entrySet()) {
+      try {
+        Assert.fail(Arrays.toString(Util.fromHexString(test.getKey())));
+      } catch (final IllegalArgumentException e) {
+        Assert.assertEquals(test.getValue(), e.getMessage());
+      }
     }
   }
 
