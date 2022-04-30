@@ -7,6 +7,7 @@ package com.github.btclib;
 public final class SegwitAddress {
   /**
    * Users of this decoder must verify that the returned human readable part is valid for their application.
+   * For example, for Bitcoin, the human readable part should be "bc" for mainnet and "tb" for testnet.
    * @param address
    * @throws DecodingException
    * @throws IllegalArgumentException

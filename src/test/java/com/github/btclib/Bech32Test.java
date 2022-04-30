@@ -196,6 +196,9 @@ public class Bech32Test {
     testVectors.put(new StringBuilder().append("de1lg7wt").appendCodePoint(0xFF).toString(), new String[] { "element value out of range" });
     testVectors.put("bc1q9zpgru", new String[] { "bc", "00" });
     testVectors.put("bc1qqsa7s0f", new String[] { "bc", "0000" });
+    testVectors.put("ii2134hk2xmat79tp", new String[] { "ii2", "111517160a061b" });
+    testVectors.put("ii2134hk2xmat79tqp", new String[] { "ii2", "111517160a061b1d" });
+    testVectors.put("ii2134hk2xmat79tqqp", new String[] { "ii2", "111517160a061b1d0b" });
     //
     for (final Map.Entry<String, String[]> entry : testVectors.entrySet()) {
       try {

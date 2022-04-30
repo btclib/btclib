@@ -79,6 +79,9 @@ public class SegwitAddressTest {
     testVectors.put("bc1qu9dgdg330r6r84g5mw7wqshg04exv2uttmw2elfwx74h5tgntuzs44gyfg", new String[] { "bc", "00", "e15a86a23178f433d514dbbce042e87d72662b8b5edcacfd2e37ab7a2d135f05" });
     testVectors.put("bc1q5fgkuac9s2ry56jka5s6zqsyfcugcchry5cwu0", new String[] { "bc", "00", "a2516e770582864a6a56ed21a102044e388c62e3" });
     testVectors.put("bc1qp0lfxhnscvsu0j36l36uurgv5tuck4pzuqytkvwqp3kh78cupttqyf705v", new String[] { "bc", "00", "0bfe935e70c321c7ca3afc75ce0d0ca2f98b5422e008bb31c00c6d7f1f1c0ad6" });
+    testVectors.put("ii2134hk2xmat79tp", new String[] {"invalid witness version"});
+    testVectors.put("ii2134hk2xmat79tqp", new String[] {"invalid witness version"});
+    testVectors.put("ii2134hk2xmat79tqqp", new String[] {"invalid witness version"});
     //
     for (final Map.Entry<String, String[]> entry : testVectors.entrySet()) {
       try {
@@ -129,6 +132,8 @@ public class SegwitAddressTest {
     testVectors.put(new String[] { "an84characterslonghumanreadablepartthatcontainsthenumber1andtheexcludedcharactersbio", "00", new String(new char[20]).replace("\0", "00") }, "humanReadablePart invalid length");
     testVectors.put(new String[] { new StringBuilder().appendCodePoint(0x80).append("1eym55h").toString(), "00", new String(new char[20]).replace("\0", "00") }, "element value out of range");
     testVectors.put(new String[] { "bc", "00", "751e76e8199196d454941c45d1b3a323f1433bd6" }, "BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4");
+    testVectors.put(new String[] { "bc", "00", "751e76e8199196d454941c45d1b3a323f1433bd6" }, "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4");
+    testVectors.put(new String[] { "tb", "00", "751e76e8199196d454941c45d1b3a323f1433bd6" }, "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx");
     testVectors.put(new String[] { "Bc", "00", "751e76e8199196d454941c45d1b3a323f1433bd6" }, "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4");
     testVectors.put(new String[] { "bC", "00", "751e76e8199196d454941c45d1b3a323f1433bd6" }, "BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4");
     testVectors.put(new String[] { "BC", "00", "751e76e8199196d454941c45d1b3a323f1433bd6" }, "BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4");
@@ -175,6 +180,9 @@ public class SegwitAddressTest {
   public void test_toScriptPubKey() throws DecodingException {
     final Map<String, String> testVectors = new OneShotLinkedHashMap<>();
     testVectors.put("BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4", "0014751e76e8199196d454941c45d1b3a323f1433bd6");
+    testVectors.put("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4", "0014751e76e8199196d454941c45d1b3a323f1433bd6");
+    testVectors.put("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", "0014751e76e8199196d454941c45d1b3a323f1433bd6");
+    testVectors.put("bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3", "00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262");
     testVectors.put("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7", "00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262");
     testVectors.put("bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx", "5128751e76e8199196d454941c45d1b3a323f1433bd6751e76e8199196d454941c45d1b3a323f1433bd6");
     testVectors.put("BC1SW50QA3JX3S", "6002751e");
