@@ -3,6 +3,7 @@ package com.github.btclib;
 /**
  * https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
  * https://github.com/satoshilabs/slips/blob/master/slip-0173.md
+ * https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki
  */
 public final class SegwitAddress {
   /**
@@ -19,6 +20,7 @@ public final class SegwitAddress {
     final byte[] base256_program = Bech32.convert(data, 5, 1, data.length - 1);
     SegwitAddress.ensure((base256_program != null) && (base256_program.length >= 2) && (base256_program.length <= 40), "invalid witness program");
     SegwitAddress.ensure(!((data[0] == 0) && (base256_program.length != 20) && (base256_program.length != 32)), "invalid witness program length");
+    SegwitAddress.ensure(((data[0] == 0) && Bech32.Encoding.BECH32.equals(bech32.getEncoding())) || ((data[0] != 0) && Bech32.Encoding.BECH32M.equals(bech32.getEncoding())), "invalid encoding");
     return new SegwitAddress(bech32, data[0], base256_program);
   }
 
@@ -38,7 +40,8 @@ public final class SegwitAddress {
     final byte[] data = new byte[1 + base32_program.length];
     data[0] = (byte) witnessVersion;
     System.arraycopy(base32_program, 0, data, 1, base32_program.length);
-    return new SegwitAddress(Bech32.encode(humanReadablePart, data), data[0], base256_program);
+    final Bech32.Encoding encoding = (witnessVersion == 0) ? Bech32.Encoding.BECH32 : Bech32.Encoding.BECH32M;
+    return new SegwitAddress(Bech32.encode(humanReadablePart, data, encoding), data[0], base256_program);
   }
 
   private static void ensure(final boolean value, final String message) throws DecodingException {

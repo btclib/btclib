@@ -4,11 +4,26 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+ * https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki
  * https://github.com/satoshilabs/slips/blob/master/slip-0173.md
  * https://github.com/satoshilabs/slips/blob/master/slip-0032.md
  * https://github.com/lightningnetwork/lightning-rfc/blob/master/11-payment-encoding.md
  */
 public final class Bech32 {
+  enum Encoding {
+    BECH32(1), BECH32M(0x2bc830a3);
+
+    private final int constant;
+
+    Encoding(final int constant) {
+      this.constant = constant;
+    }
+
+    int constant() {
+      return this.constant;
+    }
+  }
+
   private static final int MIN_BECH32_LENGTH = 1 + 1 + 6; // min hrp length + separator length + checksum length
   private static final int MAX_BECH32_LENGTH = 90;
   private static final int MIN_HRP_LENGTH = 1;
@@ -38,8 +53,8 @@ public final class Bech32 {
    * @param data byte array with element values in the range [0, 31] (base32 values)
    * @return
    */
-  private static byte[] checksum(final byte[] hrp, final byte[] data) {
-    final int polymod = Bech32.polymod(Bech32.expand(hrp), data, Bech32.CHECKSUM) ^ 1;
+  private static byte[] checksum(final byte[] hrp, final byte[] data, final Encoding encoding) {
+    final int polymod = Bech32.polymod(Bech32.expand(hrp), data, Bech32.CHECKSUM) ^ encoding.constant();
     return new byte[] { //
         (byte) ((polymod >>> 25) & 0x1f), //
         (byte) ((polymod >>> 20) & 0x1f), //
@@ -142,8 +157,9 @@ public final class Bech32 {
       Bech32.ensure(lookup != -1, "checksum element not in Bech32 character set");
       checksum[i] = lookup;
     }
-    Bech32.ensure(Bech32.verify(hrp, data, checksum), "invalid checksum");
-    return new Bech32(new String(hrp, StandardCharsets.US_ASCII), data, bech32);
+    final Encoding encoding = Bech32.verify(hrp, data, checksum);
+    Bech32.ensure(encoding != null, "invalid checksum");
+    return new Bech32(new String(hrp, StandardCharsets.US_ASCII), data, bech32, encoding);
   }
 
   /**
@@ -151,9 +167,10 @@ public final class Bech32 {
    * @param data byte array with element values in the range [0, 31] (base32 values)
    * @return
    */
-  public static Bech32 encode(final String humanReadablePart, final byte[] data) {
+  public static Bech32 encode(final String humanReadablePart, final byte[] data, final Encoding encoding) {
     Util.checkArgument(humanReadablePart != null, "humanReadablePart must not be null");
     Util.checkArgument(data != null, "data must not be null");
+    Util.checkArgument(encoding != null, "encoding must not be null");
     Util.checkArgument((humanReadablePart.length() >= Bech32.MIN_HRP_LENGTH) && (humanReadablePart.length() <= Bech32.MAX_HRP_LENGTH), "humanReadablePart invalid length");
     Util.checkArgument(data.length <= (Bech32.MAX_BECH32_LENGTH - Bech32.CHECKSUM.length - Bech32.SEPARATOR_ARRAY.length - humanReadablePart.length()), "data invalid length");
     final byte[] hrp = new byte[humanReadablePart.length()];
@@ -169,12 +186,12 @@ public final class Bech32 {
     for (final byte element : cloned) { // verify that all data is in base32. it is a class invariant that the data member is all base32 data.
       Util.checkArgument((element >= 0) && (element <= 31), "element value not in base32");
     }
-    final byte[] checksum = Bech32.checksum(hrp, cloned);
+    final byte[] checksum = Bech32.checksum(hrp, cloned, encoding);
     final byte[] result = Util.concat(hrp, Bech32.SEPARATOR_ARRAY, cloned, checksum);
     for (int i = hrp.length + Bech32.SEPARATOR_ARRAY.length; i < result.length; i++) {
       result[i] = Bech32.CHARSET[result[i]];
     }
-    return new Bech32(new String(hrp, StandardCharsets.US_ASCII), cloned, new String(result, StandardCharsets.US_ASCII));
+    return new Bech32(new String(hrp, StandardCharsets.US_ASCII), cloned, new String(result, StandardCharsets.US_ASCII), encoding);
   }
 
   private static void ensure(final boolean value, final String message) throws DecodingException {
@@ -222,18 +239,27 @@ public final class Bech32 {
    * @param checksum
    * @return
    */
-  private static boolean verify(final byte[] hrp, final byte[] data, final byte[] checksum) {
-    return Bech32.polymod(Bech32.expand(hrp), data, checksum) == 1;
+  private static Encoding verify(final byte[] hrp, final byte[] data, final byte[] checksum) {
+    final int constant = Bech32.polymod(Bech32.expand(hrp), data, checksum);
+    if (constant == Encoding.BECH32.constant()) {
+      return Encoding.BECH32;
+    }
+    if (constant == Encoding.BECH32M.constant()) {
+      return Encoding.BECH32M;
+    }
+    return null;
   }
 
   private final String humanReadablePart;
   private final byte[] data;
   private final String bech32;
+  private final Encoding encoding;
 
-  private Bech32(final String humanReadablePart, final byte[] data, final String bech32) {
+  private Bech32(final String humanReadablePart, final byte[] data, final String bech32, final Encoding encoding) {
     this.humanReadablePart = humanReadablePart;
     this.data = data;
     this.bech32 = bech32;
+    this.encoding = encoding;
   }
 
   /**
@@ -241,6 +267,13 @@ public final class Bech32 {
    */
   public byte[] getData() {
     return this.data.clone();
+  }
+
+  /**
+   * @return the encoding
+   */
+  public Encoding getEncoding() {
+    return this.encoding;
   }
 
   /**
