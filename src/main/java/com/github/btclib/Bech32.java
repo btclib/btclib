@@ -24,13 +24,15 @@ public final class Bech32 {
     }
   }
 
-  private static final int MIN_BECH32_LENGTH = 1 + 1 + 6; // min hrp length + separator length + checksum length
-  private static final int MAX_BECH32_LENGTH = 90;
   private static final int MIN_HRP_LENGTH = 1;
   private static final int MAX_HRP_LENGTH = 83;
+  private static final int SEPARATOR_LENGTH = 1;
+  private static final int CHECKSUM_LENGTH = 6;
+  private static final int MIN_BECH32_LENGTH = Bech32.MIN_HRP_LENGTH + Bech32.SEPARATOR_LENGTH + Bech32.CHECKSUM_LENGTH;
+  private static final int MAX_BECH32_LENGTH = Bech32.MAX_HRP_LENGTH + Bech32.SEPARATOR_LENGTH + Bech32.CHECKSUM_LENGTH;
   private static final int SEPARATOR = '1';
   private static final byte[] SEPARATOR_ARRAY = { Bech32.SEPARATOR };
-  private static final byte[] CHECKSUM = new byte[6];
+  private static final byte[] CHECKSUM = new byte[Bech32.CHECKSUM_LENGTH];
   private static final byte[] CHARSET = { //
       'q', 'p', 'z', 'r', 'y', '9', 'x', '8', //
       'g', 'f', '2', 't', 'v', 'd', 'w', '0', //
@@ -131,7 +133,7 @@ public final class Bech32 {
         seperatorIndex = i; // the last one found is the separator
       }
     }
-    Bech32.ensure((seperatorIndex >= 1) && (seperatorIndex <= (bech32.length() - Bech32.CHECKSUM.length - Bech32.SEPARATOR_ARRAY.length)), "invalid separator location");
+    Bech32.ensure((seperatorIndex >= 1) && (seperatorIndex <= (bech32.length() - Bech32.CHECKSUM_LENGTH - Bech32.SEPARATOR_LENGTH)), "invalid separator location");
     // process the human readable part
     final byte[] hrp = new byte[seperatorIndex];
     for (int i = 0; i < hrp.length; i++) {
@@ -142,17 +144,17 @@ public final class Bech32 {
       hrp[i] = (byte) element;
     }
     // process the data part
-    final byte[] data = new byte[bech32.length() - Bech32.CHECKSUM.length - Bech32.SEPARATOR_ARRAY.length - hrp.length];
+    final byte[] data = new byte[bech32.length() - Bech32.CHECKSUM_LENGTH - Bech32.SEPARATOR_LENGTH - hrp.length];
     for (int i = 0; i < data.length; i++) {
-      final int element = bech32.charAt(hrp.length + Bech32.SEPARATOR_ARRAY.length + i);
+      final int element = bech32.charAt(hrp.length + Bech32.SEPARATOR_LENGTH + i);
       final byte lookup = Bech32.CHARSET_REVERSE[element];
       Bech32.ensure(lookup != -1, "data element not in Bech32 character set");
       data[i] = lookup;
     }
     // process the checksum
-    final byte[] checksum = new byte[Bech32.CHECKSUM.length];
+    final byte[] checksum = new byte[Bech32.CHECKSUM_LENGTH];
     for (int i = 0; i < checksum.length; i++) {
-      final int element = bech32.charAt((bech32.length() - Bech32.CHECKSUM.length) + i);
+      final int element = bech32.charAt((bech32.length() - Bech32.CHECKSUM_LENGTH) + i);
       final byte lookup = Bech32.CHARSET_REVERSE[element];
       Bech32.ensure(lookup != -1, "checksum element not in Bech32 character set");
       checksum[i] = lookup;
@@ -172,7 +174,7 @@ public final class Bech32 {
     Util.checkArgument(data != null, "data must not be null");
     Util.checkArgument(encoding != null, "encoding must not be null");
     Util.checkArgument((humanReadablePart.length() >= Bech32.MIN_HRP_LENGTH) && (humanReadablePart.length() <= Bech32.MAX_HRP_LENGTH), "humanReadablePart invalid length");
-    Util.checkArgument(data.length <= (Bech32.MAX_BECH32_LENGTH - Bech32.CHECKSUM.length - Bech32.SEPARATOR_ARRAY.length - humanReadablePart.length()), "data invalid length");
+    Util.checkArgument(data.length <= (Bech32.MAX_BECH32_LENGTH - Bech32.CHECKSUM_LENGTH - Bech32.SEPARATOR_LENGTH - humanReadablePart.length()), "data invalid length");
     final byte[] hrp = new byte[humanReadablePart.length()];
     for (int i = 0; i < hrp.length; i++) {
       int element = humanReadablePart.charAt(i); // do widening primitive conversion once
@@ -188,7 +190,7 @@ public final class Bech32 {
     }
     final byte[] checksum = Bech32.checksum(hrp, cloned, encoding);
     final byte[] result = Util.concat(hrp, Bech32.SEPARATOR_ARRAY, cloned, checksum);
-    for (int i = hrp.length + Bech32.SEPARATOR_ARRAY.length; i < result.length; i++) {
+    for (int i = hrp.length + Bech32.SEPARATOR_LENGTH; i < result.length; i++) {
       result[i] = Bech32.CHARSET[result[i]];
     }
     return new Bech32(new String(hrp, StandardCharsets.US_ASCII), cloned, new String(result, StandardCharsets.US_ASCII), encoding);
