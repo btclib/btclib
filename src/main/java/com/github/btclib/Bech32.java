@@ -12,15 +12,6 @@ import java.util.Optional;
  * https://github.com/sipa/bech32/blob/master/ref/python/segwit_addr.py
  * https://medium.com/@meshcollider/some-of-the-math-behind-bech32-addresses-cf03c7496285
  */
-// the max input length limit is primarily a mechanism to: 1) avoid integer overflow, and 2) reduce the resource requirements of boundary testing.
-// the limits (10 * 1024 = 10240 = 10 KiB and 16 * 1024 = 16384 = 16 KiB) are set well below what is needed to avoid overflow (Integer.MAX_VALUE / 8 = 268435455).
-// secondarily, the limits were selected to limit the length of the resulting array of converting from 8 bits per element to 5 bits per element while accommodating
-// known uses. factors that went into determining the desirable result array size limit include:
-// 1) it is much bigger than the limit that makes sense for Bech32 -- From BIP 173: "Even though the chosen code performs reasonably well up to 1023 characters,
-//    other designs are preferable for lengths above 89 characters (excluding the separator)." And: "A Bech32 string is at most 90 characters long".
-// 2) it is bigger than the LND lightning network node's invoice limit of 7089. see https://github.com/lightningnetwork/lnd/issues/4415
-// 3) it is bigger than the QR code alphanumeric limit of 4296
-// 4) it is an exact power of 2 (2 ** 14 = 16384 = 16 KiB)
 public final class Bech32 {
   public enum Variant {
     BECH32(1), BECH32M(0x2bc830a3);
@@ -40,6 +31,15 @@ public final class Bech32 {
   public static final int MAX_HRP_LENGTH = 83;
   public static final int SEPARATOR_LENGTH = 1;
   public static final int CHECKSUM_LENGTH = 6;
+  //the max input length limits are primarily a mechanism to: 1) avoid integer overflow, and 2) reduce the resource requirements of boundary testing.
+  //the limits (10 * 1024 = 10240 = 10 KiB and 16 * 1024 = 16384 = 16 KiB) are set well below what is needed to avoid overflow (Integer.MAX_VALUE / 8 = 268435455).
+  //secondarily, the limits were selected to limit the length of the resulting array of converting from 8 bits per element to 5 bits per element while accommodating
+  //known uses. factors that went into determining the desirable result array size limit include:
+  //1) it is much bigger than the limit that makes sense for Bech32 -- From BIP 173: "Even though the chosen code performs reasonably well up to 1023 characters,
+  //   other designs are preferable for lengths above 89 characters (excluding the separator)." And: "A Bech32 string is at most 90 characters long".
+  //2) it is bigger than the LND lightning network node's invoice limit of 7089. see https://github.com/lightningnetwork/lnd/issues/4415
+  //3) it is bigger than the QR code alphanumeric limit of 4296
+  //4) it is an exact power of 2 (2 ** 14 = 16384 = 16 KiB)
   public static final int EIGHT_TO_FIVE_MAX_LENGTH = 10 * 1024;
   public static final int FIVE_TO_EIGHT_MAX_LENGTH = 16 * 1024;
   public static final int MIN_BECH32_LENGTH = Bech32.MIN_HRP_LENGTH + Bech32.SEPARATOR_LENGTH + Bech32.CHECKSUM_LENGTH;
@@ -79,6 +79,28 @@ public final class Bech32 {
     };
   }
 
+  private static int convert(final int fromBits, final int toBits, final byte[] input, final byte[] result) {
+    assert ((fromBits == 8) && (toBits == 5)) || ((fromBits == 5) && (toBits == 8));
+    assert input != null;
+    assert result != null;
+    final int bitsMask = (1 << toBits) - 1;
+    int resultIndex = 0;
+    int bits = 0;
+    int bitsAvailable = 0;
+    // process the whole groups in this loop
+    for (final byte element : input) {
+      final int value = element & 0xff; // mask to discard any 1 bits added during widening primitive conversion sign extension
+      Util.check((value >>> fromBits) == 0, "input element value invalid"); // make sure no unexpected higher order bits are set
+      bits = (bits << fromBits) | value;
+      bitsAvailable += fromBits;
+      for (; bitsAvailable >= toBits; resultIndex++) {
+        bitsAvailable -= toBits;
+        result[resultIndex] = (byte) ((bits >>> bitsAvailable) & bitsMask);
+      }
+    }
+    return (bits << (toBits - bitsAvailable)) & bitsMask; // add the zero valued padding bits via left shift;
+  }
+
   /**
    * @param input an array of length [0, Bech32.FIVE_TO_EIGHT_MAX_LENGTH] with each element containing 5 bits of data per element
    * @return an array with each element having 8 bits of data per element
@@ -96,32 +118,14 @@ public final class Bech32 {
     final int wholeGroups = inputBitCount / toBits;
     final int remainingBits = inputBitCount % toBits;
     final byte[] result = new byte[wholeGroups];
-    final int bitsMask = (1 << toBits) - 1;
-    int resultIndex = 0;
-    int bits = 0;
-    int bitsAvailable = 0;
-    // process the whole groups in this loop
-    for (final byte element : input) {
-      final int value = element & 0xff; // mask to discard any 1 bits added during widening primitive conversion sign extension
-      Util.check((value >>> fromBits) == 0, "input element value invalid"); // make sure no unexpected higher order bits are set
-      bits = (bits << fromBits) | value;
-      bitsAvailable += fromBits;
-      for (; bitsAvailable >= toBits; resultIndex++) {
-        bitsAvailable -= toBits;
-        result[resultIndex] = (byte) ((bits >>> bitsAvailable) & bitsMask);
-      }
-    }
-    assert wholeGroups == resultIndex;
-    assert remainingBits == bitsAvailable;
+    final int paddedRemainingBits = Bech32.convert(fromBits, toBits, input, result); // process the whole groups
     // process any remaining bits
-    if (bitsAvailable > 0) {
-      final int paddedRemainingBits = (bits << (toBits - bitsAvailable)) & bitsMask; // add the zero valued padding bits via left shift
+    if (remainingBits > 0) {
       // successfully discard bits only if they are actually valid padding bits
       // bip 173: "Any incomplete group at the end MUST be 4 bits or less, MUST be all zeroes, and is discarded."
-      Util.ensure(bitsAvailable < fromBits, "invalid padding too many bits");
+      Util.ensure(remainingBits < fromBits, "invalid padding too many bits");
       Util.ensure(paddedRemainingBits == 0, "invalid padding non-zero bits");
     }
-    assert result.length == resultIndex;
     return result;
   }
 
@@ -140,34 +144,15 @@ public final class Bech32 {
     final int wholeGroups = inputBitCount / toBits;
     final int remainingBits = inputBitCount % toBits;
     final byte[] result = new byte[wholeGroups + ((remainingBits != 0) ? 1 : 0)];
-    final int bitsMask = (1 << toBits) - 1;
-    int resultIndex = 0;
-    int bits = 0;
-    int bitsAvailable = 0;
-    // process the whole groups in this loop
-    for (final byte element : input) {
-      final int value = element & 0xff; // mask to discard any 1 bits added during widening primitive conversion sign extension
-      Util.check((value >>> fromBits) == 0, "input element value invalid"); // make sure no unexpected higher order bits are set
-      bits = (bits << fromBits) | value;
-      bitsAvailable += fromBits;
-      for (; bitsAvailable >= toBits; resultIndex++) {
-        bitsAvailable -= toBits;
-        result[resultIndex] = (byte) ((bits >>> bitsAvailable) & bitsMask);
-      }
-    }
-    assert wholeGroups == resultIndex;
-    assert remainingBits == bitsAvailable;
+    final int paddedRemainingBits = Bech32.convert(fromBits, toBits, input, result); // process the whole groups
     // process any remaining bits
-    if (bitsAvailable > 0) {
-      final int paddedRemainingBits = (bits << (toBits - bitsAvailable)) & bitsMask; // add the zero valued padding bits via left shift
+    if (remainingBits > 0) {
       // when we go from 8 to 5, we pad with zero valued bits, if necessary. this mechanism is a way to invert
       // the prior conversion by discarding valid padding bits when going from 5 to 8 so that we conclude with the original data.
       // when inputBitCount is not evenly divisible by toBits, 1 to (toBits - 1) padding bits
       // aka (toBits - remainingBits), each with value 0, will be appended to the input data bits
-      result[resultIndex] = (byte) paddedRemainingBits;
-      resultIndex++;
+      result[result.length - 1] = (byte) paddedRemainingBits;
     }
-    assert result.length == resultIndex;
     return result;
   }
 
