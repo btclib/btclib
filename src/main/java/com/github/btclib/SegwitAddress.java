@@ -32,7 +32,7 @@ public final class SegwitAddress {
     Util.check((2 <= program.length) && (program.length <= 40), "program length invalid");
     Util.check((version != 0) || (program.length == 20 /* v0 p2wpkh */) || (program.length == 32 /* v0 p2wsh */), "program length invalid for version 0");
     final byte[] program8 = program.clone(); // make a defensive copy after the length has been sanity checked. the 8 denotes 8 data bits per element.
-    final byte[] program5 = Bech32.Conversion.EIGHT_TO_FIVE.convert(program8); // the 5 denotes 5 data bits per element.
+    final byte[] program5 = Bech32.convert8to5(program8); // the 5 denotes 5 data bits per element.
     final byte[] data5 = Util.concat(version, program5); // each element contains 5 bits of data
     Util.check(humanReadablePart.length() <= (SegwitAddress.MAX_LENGTH - Bech32.CHECKSUM_LENGTH - data5.length - Bech32.SEPARATOR_LENGTH), "humanReadablePart length invalid");
     final var variant = (version == 0) ? Bech32.Variant.BECH32 : Bech32.Variant.BECH32M;
@@ -61,16 +61,7 @@ public final class SegwitAddress {
     Util.ensure((0 <= version) && (version <= 16), "decoded version invalid");
     Util.ensure(((version == 0) && Bech32.Variant.BECH32.equals(bech32.getVariant())) || ((version != 0) && Bech32.Variant.BECH32M.equals(bech32.getVariant())), "bech32 variant invalid");
     final byte[] program5 = Arrays.copyOfRange(data5, 1, data5.length);
-    byte[] program = null;
-    try {
-      // todo: refactor the conversion method so that this awkward try-catch is not necessary.
-      // the conversion should throw a checked DecodingException instead of necessitating
-      // a re-wrapped throw here. but, the conversion method should not require the encoding
-      // code path to catch an exception that can not be thrown.
-      program = Bech32.Conversion.FIVE_TO_EIGHT.convert(program5);
-    } catch (final IllegalArgumentException e) {
-      Util.ensure(false, e.getMessage()); // invalid padding bits are the only possible causes
-    }
+    final byte[] program = Bech32.convert5to8(program5);
     Util.ensure((version != 0) || (program.length == 20 /* v0 p2wpkh */) || (program.length == 32 /* v0 p2wsh */), "decoded program length invalid for version 0");
     return new SegwitAddress(bech32, version, program);
   }

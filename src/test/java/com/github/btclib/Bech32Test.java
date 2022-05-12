@@ -27,7 +27,7 @@ public class Bech32Test {
   @Test
   public void test_convert_0() {
     final var e = Assert.assertThrows(NullPointerException.class, () -> {
-      Bech32.Conversion.EIGHT_TO_FIVE.convert(null);
+      Bech32.convert8to5(null);
     });
     Assert.assertEquals("input must not be null", e.getMessage());
   }
@@ -35,7 +35,7 @@ public class Bech32Test {
   @Test
   public void test_convert_1() {
     final var e = Assert.assertThrows(NullPointerException.class, () -> {
-      Bech32.Conversion.FIVE_TO_EIGHT.convert(null);
+      Bech32.convert5to8(null);
     });
     Assert.assertEquals("input must not be null", e.getMessage());
   }
@@ -43,18 +43,18 @@ public class Bech32Test {
   @Test
   public void test_convert_5_to_8() {
     final var testVectors = new LinkedHashMap<byte[], Object>();
-    testVectors.put(new byte[Bech32.Conversion.FIVE_TO_EIGHT.getMaxInputLength() + 1], new IllegalArgumentException("input too long"));
-    testVectors.put(new byte[Bech32.Conversion.FIVE_TO_EIGHT.getMaxInputLength()], new byte[Bech32.Conversion.EIGHT_TO_FIVE.getMaxInputLength()]); // max length input
+    testVectors.put(new byte[Bech32.FIVE_TO_EIGHT_MAX_LENGTH + 1], new IllegalArgumentException("input too long"));
+    testVectors.put(new byte[Bech32.FIVE_TO_EIGHT_MAX_LENGTH], new byte[Bech32.EIGHT_TO_FIVE_MAX_LENGTH]); // max length input
     testVectors.put(Util.EMPTY_BYTE_ARRAY, Util.EMPTY_BYTE_ARRAY); // min length input
     testVectors.put(Util.fromHexString("ff"), new IllegalArgumentException("input element value invalid")); // max byte value
     testVectors.put(Util.fromHexString("80"), new IllegalArgumentException("input element value invalid")); // an invalid element value
     testVectors.put(Util.fromHexString("40"), new IllegalArgumentException("input element value invalid")); // an invalid element value
     testVectors.put(Util.fromHexString("20"), new IllegalArgumentException("input element value invalid")); // an invalid element value (one greater than max value for 5 bits)
-    testVectors.put(Util.fromHexString("1f"), new IllegalArgumentException("invalid padding too many bits")); // only provide 5 bits of data which is not enough to convert back to 8
-    testVectors.put(Util.fromHexString("00"), new IllegalArgumentException("invalid padding too many bits")); // only provide 5 bits of data which is not enough to convert back to 8
-    testVectors.put(new byte[] { 0b11111, 0b11110, }, new IllegalArgumentException("invalid padding non-zero bits")); // padding bits should be zero
-    testVectors.put(new byte[] { 0b11111, 0b11101, }, new IllegalArgumentException("invalid padding non-zero bits")); // padding bits should be zero
-    testVectors.put(new byte[] { 0b11111, 0b11111, }, new IllegalArgumentException("invalid padding non-zero bits")); // padding bits should be zero
+    testVectors.put(Util.fromHexString("1f"), new DecodingException("invalid padding too many bits")); // only provide 5 bits of data which is not enough to convert back to 8
+    testVectors.put(Util.fromHexString("00"), new DecodingException("invalid padding too many bits")); // only provide 5 bits of data which is not enough to convert back to 8
+    testVectors.put(new byte[] { 0b11111, 0b11110, }, new DecodingException("invalid padding non-zero bits")); // padding bits should be zero
+    testVectors.put(new byte[] { 0b11111, 0b11101, }, new DecodingException("invalid padding non-zero bits")); // padding bits should be zero
+    testVectors.put(new byte[] { 0b11111, 0b11111, }, new DecodingException("invalid padding non-zero bits")); // padding bits should be zero
     testVectors.put(new byte[] { 0b11111, 0b11100, }, Util.fromHexString("ff")); // 2 good incoming padding bits
     testVectors.put(new byte[] { 0b11111, 0b11111, 0b11111, 0b10000, }, Util.fromHexString("ffff")); // 4 good incoming padding bits
     testVectors.put(new byte[] { 0b11111, 0b11111, 0b11111, 0b11111, 0b11110, }, Util.fromHexString("ffffff")); // 1 good incoming padding bits
@@ -66,7 +66,7 @@ public class Bech32Test {
     testVectors.put(new byte[52], new byte[32]); // 52 is the size of a p2wsh 5 bit per element witness program
     for (final var entry : testVectors.entrySet()) {
       try {
-        final byte[] result = Bech32.Conversion.FIVE_TO_EIGHT.convert(entry.getKey());
+        final byte[] result = Bech32.convert5to8(entry.getKey());
         Assert.assertArrayEquals((byte[]) entry.getValue(), result);
       } catch (final Exception e) {
         Assert.assertEquals(entry.getValue().toString(), e.toString());
@@ -77,8 +77,8 @@ public class Bech32Test {
   @Test
   public void test_convert_8_to_5() {
     final var testVectors = new LinkedHashMap<byte[], Object>();
-    testVectors.put(new byte[Bech32.Conversion.EIGHT_TO_FIVE.getMaxInputLength() + 1], new IllegalArgumentException("input too long"));
-    testVectors.put(new byte[Bech32.Conversion.EIGHT_TO_FIVE.getMaxInputLength()], new byte[Bech32.Conversion.FIVE_TO_EIGHT.getMaxInputLength()]); // max length input
+    testVectors.put(new byte[Bech32.EIGHT_TO_FIVE_MAX_LENGTH + 1], new IllegalArgumentException("input too long"));
+    testVectors.put(new byte[Bech32.EIGHT_TO_FIVE_MAX_LENGTH], new byte[Bech32.FIVE_TO_EIGHT_MAX_LENGTH]); // max length input
     testVectors.put(Util.EMPTY_BYTE_ARRAY, Util.EMPTY_BYTE_ARRAY); // min length input
     testVectors.put(Util.fromHexString("ff"), new byte[] { 0b11111, 0b11100, }); // max byte value, tests sign extension
     testVectors.put(Util.fromHexString("00"), new byte[] { 0, 0, }); // min byte value
@@ -106,7 +106,7 @@ public class Bech32Test {
     testVectors.put(new byte[32], new byte[52]); // 32 is the size of a p2wsh witness program
     for (final var entry : testVectors.entrySet()) {
       try {
-        final byte[] result = Bech32.Conversion.EIGHT_TO_FIVE.convert(entry.getKey());
+        final byte[] result = Bech32.convert8to5(entry.getKey());
         Assert.assertArrayEquals((byte[]) entry.getValue(), result);
       } catch (final Exception e) {
         Assert.assertEquals(entry.getValue().toString(), e.toString());
@@ -117,10 +117,10 @@ public class Bech32Test {
   @Test
   public void test_convert_roundtrip() throws Exception {
     final var tests = new LinkedList<byte[]>();
-    final byte[] allOnes = new byte[Bech32.Conversion.EIGHT_TO_FIVE.getMaxInputLength()];
+    final byte[] allOnes = new byte[Bech32.EIGHT_TO_FIVE_MAX_LENGTH];
     Arrays.fill(allOnes, (byte) 0xff);
     tests.add(allOnes);
-    tests.add(new byte[Bech32.Conversion.EIGHT_TO_FIVE.getMaxInputLength()]);
+    tests.add(new byte[Bech32.EIGHT_TO_FIVE_MAX_LENGTH]);
     tests.add(Util.EMPTY_BYTE_ARRAY);
     tests.add(Util.fromHexString("ff"));
     tests.add(Util.fromHexString("20"));
@@ -134,7 +134,7 @@ public class Bech32Test {
     tests.add(new byte[20]);
     tests.add(new byte[32]);
     for (final var test : tests) {
-      final byte[] result = Bech32.Conversion.FIVE_TO_EIGHT.convert(Bech32.Conversion.EIGHT_TO_FIVE.convert(test));
+      final byte[] result = Bech32.convert5to8(Bech32.convert8to5(test));
       Assert.assertArrayEquals(test, result);
     }
   }
@@ -263,8 +263,8 @@ public class Bech32Test {
     testVectors.put("bc10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90", new String[] { "bc", "BECH32", }); // this should fail for the SegwitAddress class
     testVectors.put("BC1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P", new String[] { "bc", "BECH32", }); // this should fail for the SegwitAddress class
     testVectors.put("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7", new DecodingException("input is mixed case"));
-    testVectors.put("bc1zw508d6qejxtdg4y5r3zarvaryvqyzf3du", new String[] { "bc", "BECH32", "java.lang.IllegalArgumentException: invalid padding too many bits", }); // this should fail for the SegwitAddress class
-    testVectors.put("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv", new String[] { "tb", "BECH32", "java.lang.IllegalArgumentException: invalid padding non-zero bits", }); // this should fail for the SegwitAddress class
+    testVectors.put("bc1zw508d6qejxtdg4y5r3zarvaryvqyzf3du", new String[] { "bc", "BECH32", "com.github.btclib.DecodingException: invalid padding too many bits", }); // this should fail for the SegwitAddress class
+    testVectors.put("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv", new String[] { "tb", "BECH32", "com.github.btclib.DecodingException: invalid padding non-zero bits", }); // this should fail for the SegwitAddress class
     testVectors.put("bc1gmk9yu", new String[] { "bc", "BECH32", }); // this should fail for the SegwitAddress class
     // https://github.com/sipa/bech32/issues/51
     testVectors.put("ii2134hk2xmat79tp", new String[] { "ii2", "BECH32", });
@@ -314,8 +314,8 @@ public class Bech32Test {
     testVectors.put("bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7v8n0nx0muaewav253zgeav", new String[] { "bc", "BECH32M", }); // this should fail for the SegwitAddress class
     testVectors.put("BC1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P", new String[] { "bc", "BECH32", }); // this should fail for the SegwitAddress class
     testVectors.put("tb1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq47Zagq", new DecodingException("input is mixed case"));
-    testVectors.put("bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7v07qwwzcrf", new String[] { "bc", "BECH32M", "java.lang.IllegalArgumentException: invalid padding too many bits", });
-    testVectors.put("tb1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vpggkg4j", new String[] { "tb", "BECH32M", "java.lang.IllegalArgumentException: invalid padding non-zero bits", });
+    testVectors.put("bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7v07qwwzcrf", new String[] { "bc", "BECH32M", "com.github.btclib.DecodingException: invalid padding too many bits", });
+    testVectors.put("tb1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vpggkg4j", new String[] { "tb", "BECH32M", "com.github.btclib.DecodingException: invalid padding non-zero bits", });
     testVectors.put("bc1gmk9yu", new String[] { "bc", "BECH32", }); // this should fail for the SegwitAddress class
     // https://github.com/satoshilabs/slips/blob/master/slip-0173.md
     // https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki#test-vectors
@@ -351,7 +351,7 @@ public class Bech32Test {
           if (((1 + 4) <= data5.length) && (data5.length <= (1 + 64))) {
             final byte[] program5 = Arrays.copyOfRange(data5, 1, data5.length);
             try {
-              final byte[] program8 = Bech32.Conversion.FIVE_TO_EIGHT.convert(program5);
+              final byte[] program8 = Bech32.convert5to8(program5);
               Assert.assertArrayEquals(entry.getKey(), Util.fromHexString(expected[2]), program8); // compare the program portion of the data that is published in the test vectors
             } catch (final Exception e) {
               Assert.assertEquals(entry.getKey(), expected[2], e.toString());
