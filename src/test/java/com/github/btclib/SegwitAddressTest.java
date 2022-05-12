@@ -10,6 +10,8 @@ import org.junit.Test;
  * secp256k1 G = 0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
  * hash160(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798) = 751e76e8199196d454941c45d1b3a323f1433bd6 p2wpkh witness program
  * sha256(210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac) = 1863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262 p2wsh witness program
+ * sha256(52210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179852ae) = d714cd9a28197a7a65cccd77a20938194fdc05910105459ae6a9715918c6c408 = wsh(multi(2,0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798))#e2vfg425 p2wsh multisig
+ * sha256(52210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179853ae) = 344ca405ea441a95efe903cc7325aa0303f0a398af394b0194962f3afbe7ce8e = wsh(multi(2,0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798))#q46wtff5 p2wsh multisig
  */
 public class SegwitAddressTest {
   @Test
@@ -211,6 +213,10 @@ public class SegwitAddressTest {
     testVectors.put(new String[] { "bc", "bc1pwl3s54fzmk0cjnpl3w9af39je7pv5ldg504x5guk2hpecpg2kgsqaqstjq", }, new String[] { "1", "77e30a5522dd9f894c3f8b8bd4c4b2cf82ca7da8a3ea6a239655c39c050ab220", "BECH32M", "512077e30a5522dd9f894c3f8b8bd4c4b2cf82ca7da8a3ea6a239655c39c050ab220", });
     testVectors.put(new String[] { "bc", "bc1pjxmy65eywgafs5tsunw95ruycpqcqnev6ynxp7jaasylcgtcxczs6n332e", }, new String[] { "1", "91b64d5324723a985170e4dc5a0f84c041804f2cd12660fa5dec09fc21783605", "BECH32M", "512091b64d5324723a985170e4dc5a0f84c041804f2cd12660fa5dec09fc21783605", });
     testVectors.put(new String[] { "bc", "bc1pw5tf7sqp4f50zka7629jrr036znzew70zxyvvej3zrpf8jg8hqcssyuewe", }, new String[] { "1", "75169f4001aa68f15bbed28b218df1d0a62cbbcf1188c6665110c293c907b831", "BECH32M", "512075169f4001aa68f15bbed28b218df1d0a62cbbcf1188c6665110c293c907b831", });
+    //
+    testVectors.put(new String[] { "bc", "bc1q6u2vmx3gr9a85ewve4m6yzfcr98acpv3qyz5txhx49c4jxxxcsyqy9crte", }, new String[] { "0", "d714cd9a28197a7a65cccd77a20938194fdc05910105459ae6a9715918c6c408", "BECH32", "0020d714cd9a28197a7a65cccd77a20938194fdc05910105459ae6a9715918c6c408", });
+    testVectors.put(new String[] { "bc", "bc1qx3x2gp02gsdftmlfq0x8xfd2qvplpguc4uu5kqv5jchn47l8e68qrgyhzz", }, new String[] { "0", "344ca405ea441a95efe903cc7325aa0303f0a398af394b0194962f3afbe7ce8e", "BECH32", "0020344ca405ea441a95efe903cc7325aa0303f0a398af394b0194962f3afbe7ce8e", });
+    //
     for (final var entry : testVectors.entrySet()) {
       final String help = entry.getKey()[0] + "," + entry.getKey()[1];
       final String hrp = (entry.getKey()[0] == null) ? null : entry.getKey()[0];
@@ -346,6 +352,10 @@ public class SegwitAddressTest {
     testVectors.put(new String[] { "bc", "1", "77e30a5522dd9f894c3f8b8bd4c4b2cf82ca7da8a3ea6a239655c39c050ab220", }, new String[] { "bc1pwl3s54fzmk0cjnpl3w9af39je7pv5ldg504x5guk2hpecpg2kgsqaqstjq", "512077e30a5522dd9f894c3f8b8bd4c4b2cf82ca7da8a3ea6a239655c39c050ab220", "BECH32M", });
     testVectors.put(new String[] { "bc", "1", "91b64d5324723a985170e4dc5a0f84c041804f2cd12660fa5dec09fc21783605", }, new String[] { "bc1pjxmy65eywgafs5tsunw95ruycpqcqnev6ynxp7jaasylcgtcxczs6n332e", "512091b64d5324723a985170e4dc5a0f84c041804f2cd12660fa5dec09fc21783605", "BECH32M", });
     testVectors.put(new String[] { "bc", "1", "75169f4001aa68f15bbed28b218df1d0a62cbbcf1188c6665110c293c907b831", }, new String[] { "bc1pw5tf7sqp4f50zka7629jrr036znzew70zxyvvej3zrpf8jg8hqcssyuewe", "512075169f4001aa68f15bbed28b218df1d0a62cbbcf1188c6665110c293c907b831", "BECH32M", });
+    //
+    testVectors.put(new String[] { "bc", "0", "d714cd9a28197a7a65cccd77a20938194fdc05910105459ae6a9715918c6c408", }, new String[] { "bc1q6u2vmx3gr9a85ewve4m6yzfcr98acpv3qyz5txhx49c4jxxxcsyqy9crte", "0020d714cd9a28197a7a65cccd77a20938194fdc05910105459ae6a9715918c6c408", "BECH32", });
+    testVectors.put(new String[] { "bc", "0", "344ca405ea441a95efe903cc7325aa0303f0a398af394b0194962f3afbe7ce8e", }, new String[] { "bc1qx3x2gp02gsdftmlfq0x8xfd2qvplpguc4uu5kqv5jchn47l8e68qrgyhzz", "0020344ca405ea441a95efe903cc7325aa0303f0a398af394b0194962f3afbe7ce8e", "BECH32", });
+    //
     for (final var entry : testVectors.entrySet()) {
       final String help = entry.getKey()[0] + "," + entry.getKey()[1] + "," + entry.getKey()[2];
       final String hrp = (entry.getKey()[0] == null) ? null : entry.getKey()[0];
