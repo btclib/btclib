@@ -1,5 +1,7 @@
 package com.github.btclib;
 
+import java.util.Objects;
+
 /**
  * "Base58 Check" is a checksummed (truncated double-SHA256) encoding format for the transfer of binary data.
  * This encoding is commonly used to encode: 1) the hash of a public point on the secp256k1 curve to create a
@@ -15,8 +17,8 @@ public final class Base58Check {
    * @return An array of bytes representing an unsigned big-endian number.
    */
   private static byte[] convertBase(final byte[] data, final int base) {
-    Util.checkArgument(data != null);
-    Util.checkArgument((base == 256) || (base == 58));
+    assert data != null;
+    assert (base == 256) || (base == 58);
     final int resultBase = (base == 256) ? 58 : 256;
     int leadingZeros = 0; // find the first significant figure (the most-significant non-zero)
     while ((leadingZeros < data.length) && (data[leadingZeros] == 0)) {
@@ -61,8 +63,8 @@ public final class Base58Check {
    * @return The bytes encoded by the input "Base58 Check" String.
    */
   public static byte[] decode(final String data) throws DecodingException {
-    Util.checkArgument(data != null);
-    Util.checkArgument(data.length() <= 5600); // corresponds to the 4096 encoding max worst case
+    Objects.requireNonNull(data, "data must not be null");
+    Util.check(data.length() <= 5600, "data too long"); // corresponds to the 4096 encoding max worst case
     final byte[] dataWithChecksum = Base58Check.decodeBase58(data);
     if (dataWithChecksum.length < 4) { // the checksum size is always four bytes.
       throw new DecodingException("invalid checksum");
@@ -91,8 +93,8 @@ public final class Base58Check {
    * @return A "Base58 Check" encoded String.
    */
   public static String encode(final byte[] data) {
-    Util.checkArgument(data != null);
-    Util.checkArgument(data.length <= 4096);
+    Objects.requireNonNull(data, "data must not be null");
+    Util.check(data.length <= 4096, "data too long");
     // the limit of 4096 bytes was selected because it provides more than sufficient space
     // to accommodate all known uses, and because it provides an upper bound for testing
     // the array size increase when converting from base256 to base58. it also avoids

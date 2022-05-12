@@ -1,70 +1,93 @@
 package com.github.btclib;
 
+import java.util.Arrays;
+import java.util.Objects;
+
 /**
+ * https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
  * https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
- * https://github.com/satoshilabs/slips/blob/master/slip-0173.md
  * https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki
+ * https://github.com/sipa/bech32/blob/master/ref/python/segwit_addr.py
  */
 public final class SegwitAddress {
+  // BIP 173: "A Bech32 string is at most 90 characters long ..."
+  // BIP 173: "... other designs are preferable for lengths above 89 characters (excluding the separator)."
+  // this is not the limit followed in the Bech32 class so that applications besides encoding segwit addresses can be supported
+  public static final int MAX_LENGTH = Bech32.MAX_HRP_LENGTH + Bech32.SEPARATOR_LENGTH + Bech32.CHECKSUM_LENGTH;
+
   /**
-   * Users of this decoder must verify that the returned human readable part is valid for their application.
-   * For example, for Bitcoin, the human readable part should be "bc" for mainnet and "tb" for testnet.
-   * @param address
+   * @param humanReadablePart application specific human readable part of the address; must not be null, must be of length [1, 83], each element must be in the range [33, 126], must not contain any upper case letters
+   * @param version the witness version, must be in the range [0, 16]
+   * @param program the witness program, must be [2, 40] bytes long and must be {20, 32} bytes long if version is 0
+   * @return the SegwitAddress encoded with the given arguments
+   * @throws NullPointerException if humanReadablePart or program are null
+   * @throws IllegalArgumentException if version not in the range [0, 16], if program length not in [2, 40], if version is 0 and the program length
+   * is not 20 or 32, if humanReadablePart fails any of the validity checks specified by https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+   */
+  public static SegwitAddress of(final String humanReadablePart, final int version, final byte[] program) {
+    Objects.requireNonNull(humanReadablePart, "humanReadablePart must not be null");
+    Objects.requireNonNull(program, "program must not be null");
+    Util.check((Bech32.MIN_HRP_LENGTH <= humanReadablePart.length()) && (humanReadablePart.length() <= Bech32.MAX_HRP_LENGTH), "humanReadablePart length invalid");
+    Util.check((0 <= version) && (version <= 16), "version invalid");
+    Util.check((2 <= program.length) && (program.length <= 40), "program length invalid");
+    Util.check((version != 0) || (program.length == 20 /* v0 p2wpkh */) || (program.length == 32 /* v0 p2wsh */), "program length invalid for version 0");
+    final byte[] program8 = program.clone(); // make a defensive copy after the length has been sanity checked. the 8 denotes 8 data bits per element.
+    final byte[] program5 = Bech32.Conversion.EIGHT_TO_FIVE.convert(program8); // the 5 denotes 5 data bits per element.
+    final byte[] data5 = Util.concat(version, program5); // each element contains 5 bits of data
+    Util.check(humanReadablePart.length() <= (SegwitAddress.MAX_LENGTH - Bech32.CHECKSUM_LENGTH - data5.length - Bech32.SEPARATOR_LENGTH), "humanReadablePart length invalid");
+    final var variant = (version == 0) ? Bech32.Variant.BECH32 : Bech32.Variant.BECH32M;
+    final var bech32 = Bech32.encode(humanReadablePart, data5, variant); // humanReadablePart is validated further within
+    return new SegwitAddress(bech32, version, program8);
+  }
+
+  /**
+   * @param expectedHumanReadablePart application specific human readable part of the address; must not be null, must be of length [1, 83], each element must be in the range [33, 126], must not contain any upper case letters
+   * @param address a bech32 or bech32m encoded string to decode must be length [8, 90]
+   * @return a SegwitAddress decoded from the given address
+   * @throws NullPointerException
    * @throws DecodingException
-   * @throws IllegalArgumentException
    */
-  public static SegwitAddress decode(final String address) throws DecodingException {
-    final Bech32 bech32 = Bech32.decode(address);
-    final byte[] data = bech32.getData();
-    SegwitAddress.ensure((data.length >= 1) && (data[0] >= 0) && (data[0] <= 16), "invalid witness version");
-    final byte[] base256_program = Bech32.convert(data, 5, 1, data.length - 1);
-    SegwitAddress.ensure((base256_program != null) && (base256_program.length >= 2) && (base256_program.length <= 40), "invalid witness program");
-    SegwitAddress.ensure(!((data[0] == 0) && (base256_program.length != 20) && (base256_program.length != 32)), "invalid witness program length");
-    SegwitAddress.ensure(((data[0] == 0) && Bech32.Encoding.BECH32.equals(bech32.getEncoding())) || ((data[0] != 0) && Bech32.Encoding.BECH32M.equals(bech32.getEncoding())), "invalid encoding");
-    return new SegwitAddress(bech32, data[0], base256_program);
-  }
-
-  /**
-   * @param humanReadablePart application specific human readable part of the address
-   * @param witnessVersion must be in the range [0, 16], note that these values are NOT "OP_n" push opcode values
-   * @param witnessProgram must be [2, 40] bytes long and must be either 20 or 32 bytes long when witnessVersion is 0
-   * @throws IllegalArgumentException
-   */
-  public static SegwitAddress encode(final String humanReadablePart, final int witnessVersion, final byte[] witnessProgram) {
-    Util.checkArgument((witnessVersion >= 0) && (witnessVersion <= 16), "witnessVersion invalid");
-    Util.checkArgument(witnessProgram != null, "witnessProgram must not be null");
-    Util.checkArgument((witnessProgram.length >= 2) && (witnessProgram.length <= 40), "witnessProgram invalid length");
-    Util.checkArgument(!((witnessVersion == 0) && (witnessProgram.length != 20) && (witnessProgram.length != 32)), "witnessProgram invalid length for witnessVersion");
-    final byte[] base256_program = witnessProgram.clone();
-    final byte[] base32_program = Bech32.convert(base256_program, 8, 0, base256_program.length);
-    final byte[] data = new byte[1 + base32_program.length];
-    data[0] = (byte) witnessVersion;
-    System.arraycopy(base32_program, 0, data, 1, base32_program.length);
-    final Bech32.Encoding encoding = (witnessVersion == 0) ? Bech32.Encoding.BECH32 : Bech32.Encoding.BECH32M;
-    return new SegwitAddress(Bech32.encode(humanReadablePart, data, encoding), data[0], base256_program);
-  }
-
-  private static void ensure(final boolean value, final String message) throws DecodingException {
-    if (!value) {
-      throw new DecodingException(message);
+  public static SegwitAddress of(final String expectedHumanReadablePart, final String address) throws DecodingException {
+    Objects.requireNonNull(expectedHumanReadablePart, "expectedHumanReadablePart must not be null");
+    Objects.requireNonNull(address, "address must not be null");
+    Util.ensure((Bech32.MIN_BECH32_LENGTH <= address.length()) && (address.length() <= SegwitAddress.MAX_LENGTH), "address length invalid");
+    final var bech32 = Bech32.decode(address);
+    Util.ensure(expectedHumanReadablePart.equals(bech32.getHumanReadablePart()), "expectedHumanReadablePart does not match decoded value");
+    final byte[] data5 = bech32.getData();
+    // 1 for version + [2, 40] for program length when 8 bits per element, which means
+    // [Math.ceilDivExact(2 * 8, 5) = 4, Math.ceilDivExact(40 * 8, 5) = 64] for program length when 5 bits per element
+    Util.ensure(((1 + 4) <= data5.length) && (data5.length <= (1 + 64)), "decoded data length invalid");
+    final int version = data5[0] & 0xff;
+    Util.ensure((0 <= version) && (version <= 16), "decoded version invalid");
+    Util.ensure(((version == 0) && Bech32.Variant.BECH32.equals(bech32.getVariant())) || ((version != 0) && Bech32.Variant.BECH32M.equals(bech32.getVariant())), "bech32 variant invalid");
+    final byte[] program5 = Arrays.copyOfRange(data5, 1, data5.length);
+    byte[] program = null;
+    try {
+      // todo: refactor the conversion method so that this awkward try-catch is not necessary.
+      // the conversion should throw a checked DecodingException instead of necessitating
+      // a re-wrapped throw here. but, the conversion method should not require the encoding
+      // code path to catch an exception that can not be thrown.
+      program = Bech32.Conversion.FIVE_TO_EIGHT.convert(program5);
+    } catch (final IllegalArgumentException e) {
+      Util.ensure(false, e.getMessage()); // invalid padding bits are the only possible causes
     }
+    Util.ensure((version != 0) || (program.length == 20 /* v0 p2wpkh */) || (program.length == 32 /* v0 p2wsh */), "decoded program length invalid for version 0");
+    return new SegwitAddress(bech32, version, program);
   }
 
   private final Bech32 bech32;
-  private final byte witnessVersion;
-  private final byte[] witnessProgram;
+  private final int version; // witness version
+  private final byte[] program; // witness program
 
-  private SegwitAddress(final Bech32 bech32, final byte witnessVersion, final byte[] witnessProgram) {
+  private SegwitAddress(final Bech32 bech32, final int version, final byte[] program) {
+    assert bech32 != null;
+    assert program != null;
+    assert (0 <= version) && (version <= 16);
+    assert (2 <= program.length) && (program.length <= 40);
+    assert (version != 0) || (program.length == 20 /* v0 p2wpkh */) || (program.length == 32 /* v0 p2wsh */);
     this.bech32 = bech32;
-    this.witnessVersion = witnessVersion;
-    this.witnessProgram = witnessProgram;
-  }
-
-  /**
-   * @return the bech32
-   */
-  public Bech32 getBech32() {
-    return this.bech32;
+    this.version = version;
+    this.program = program; // we don't clone the input array since this is a private constructor and the static factory methods already make defensive copies
   }
 
   /**
@@ -75,27 +98,42 @@ public final class SegwitAddress {
   }
 
   /**
-   * @return the witnessProgram
+   * @return the program
    */
-  public byte[] getWitnessProgram() {
-    return this.witnessProgram.clone();
+  public byte[] getProgram() {
+    return this.program.clone();
   }
 
   /**
-   * @return the witnessVersion
+   * @return the bech32 variant
    */
-  public byte getWitnessVersion() {
-    return this.witnessVersion;
+  public Bech32.Variant getVariant() {
+    return this.bech32.getVariant();
   }
 
   /**
-   * @return A byte array containing the scriptPubKey where the witnessVersion has been correctly converted to "OP_n" push opcodes.
+   * @return the version
    */
-  public byte[] toScriptPubKey() {
-    final byte[] result = new byte[2 + this.witnessProgram.length];
-    result[0] = this.versionToPushOpcode();
-    result[1] = (byte) this.witnessProgram.length; // this is intentionally not a minimal push opcode (reference Bitcoin Core source for CheckMinimalPush and CScript::IsWitnessProgram)
-    System.arraycopy(this.witnessProgram, 0, result, 2, this.witnessProgram.length);
+  public int getVersion() {
+    return this.version;
+  }
+
+  /**
+   * @return a byte array containing the output script, also commonly known as the scriptPubKey, corresponding to this address
+   */
+  public byte[] toOutputScript() {
+    final byte[] result = new byte[2 + this.program.length];
+    // native witness output scripts must be of length 4 to 42 (version push opcode byte + push opcode byte + witness program bytes)
+    assert (4 <= result.length) && (result.length <= 42);
+    // from https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+    // "Implementations should take special care when converting the address to a scriptPubkey, where witness version n is stored as
+    // OP_n. OP_0 is encoded as 0x00, but OP_1 through OP_16 are encoded as 0x51 though 0x60 (81 to 96 in decimal)."
+    result[0] = this.versionAsPushOpcode(); // convert version to a "OP_n" push opcode
+    // for the program lengths that we are dealing with [2, 40],
+    // a direct push (an opcode indicating the number of bytes to push + the bytes to push) is minimal.
+    // reference Bitcoin Core source for ::CheckMinimalPush and CScript::IsWitnessProgram
+    result[1] = (byte) this.program.length;
+    System.arraycopy(this.program, 0, result, 2, this.program.length);
     return result;
   }
 
@@ -107,11 +145,11 @@ public final class SegwitAddress {
     return this.bech32.toString();
   }
 
-  private byte versionToPushOpcode() {
+  private byte versionAsPushOpcode() {
     // OP_0 -> 0x00, OP_1 -> 0x51, ..., OP_16 -> 0x60
-    if ((this.witnessVersion >= 1) && (this.witnessVersion <= 16)) {
-      return (byte) (this.witnessVersion + 0x50);
+    if ((this.version >= 1) && (this.version <= 16)) {
+      return (byte) (this.version + 0x50);
     }
-    return this.witnessVersion;
+    return (byte) this.version;
   }
 }

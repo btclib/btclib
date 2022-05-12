@@ -2,50 +2,41 @@ package com.github.btclib;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Objects;
 
 public final class Util {
   public static final byte[] EMPTY_BYTE_ARRAY = {};
 
   /**
-   * @param value
-   * @throws IllegalArgumentException
-   */
-  public static void checkArgument(final boolean value) {
-    if (!value) {
-      throw new IllegalArgumentException();
-    }
-  }
-
-  /**
-   * @param value
+   * @param input
    * @param message
    * @throws IllegalArgumentException
    */
-  public static void checkArgument(final boolean value, final String message) {
-    if (!value) {
+  public static void check(final boolean input, final String message) {
+    if (!input) {
       throw new IllegalArgumentException(message);
     }
   }
 
   /**
-   * @param data
-   * @return
-   * @throws IllegalArgumentException
-   * @throws ArithmeticException when combined length of arrays is too large to fit into one array
+   * @param input
+   * @return an array that is a combined copy of all of the elements of the arrays passed in
+   * @throws NullPointerException
+   * @throws ArithmeticException if the combined length of the input arrays is too large to fit into one array
    */
-  public static byte[] concat(final byte[]... data) {
-    Util.checkArgument(data != null);
+  public static byte[] concat(final byte[]... input) {
+    Objects.requireNonNull(input, "input must not be null");
     long size = 0;
-    for (final byte[] element : data) {
-      Util.checkArgument(element != null, "element is null");
+    for (final var element : input) {
+      Objects.requireNonNull(element, "element must not be null");
       size += element.length;
       if (size > Integer.MAX_VALUE) {
-        throw new ArithmeticException(); // integer overflow. combined length of arrays is too large to fit into one array.
+        throw new ArithmeticException("combined length of input arrays is too large"); // integer overflow
       }
     }
-    final byte[] result = new byte[(int) size];
+    final var result = new byte[(int) size];
     int offset = 0;
-    for (final byte[] element : data) {
+    for (final var element : input) {
       System.arraycopy(element, 0, result, offset, element.length);
       offset += element.length;
     }
@@ -53,51 +44,95 @@ public final class Util {
   }
 
   /**
-   * @param data
+   * @param prefix an int providing its low 8 bits to be prefixed to the input
+   * @param input array of bytes to be prefixed by the low byte in prefix
+   * @return a byte array consisting of input prefixed by the low byte of prefix
+   * @throws NullPointerException if input is null
+   */
+  public static byte[] concat(final int prefix, final byte[] input) {
+    Objects.requireNonNull(input, "input must not be null");
+    return Util.concat(new byte[] { (byte) prefix, }, input);
+  }
+
+  /**
+   * @param input
+   * @param message
+   * @throws DecodingException
+   */
+  public static void ensure(final boolean input, final String message) throws DecodingException {
+    if (!input) {
+      throw new DecodingException(message);
+    }
+  }
+
+  /**
+   * @param input
    * @return
+   * @throws NullPointerException
    * @throws IllegalArgumentException
    */
-  public static byte[] fromHexString(final String data) {
-    Util.checkArgument(data != null);
-    Util.checkArgument((data.length() % 2) == 0); // must be of even length
-    final byte[] result = new byte[data.length() / 2];
-    for (int i = 0; i < (data.length() - 1); i += 2) {
-      final int hiNibble = Util.hexToDecimal(data.charAt(i)) << 4;
-      final int loNibble = Util.hexToDecimal(data.charAt(i + 1));
+  public static byte[] fromHexString(final String input) {
+    Objects.requireNonNull(input, "input must not be null");
+    Util.check((input.length() % 2) == 0, "input length must be even");
+    final var result = new byte[input.length() / 2];
+    for (int i = 0; i < (input.length() - 1); i += 2) {
+      final int hiNibble = Util.hexToDecimal(input.charAt(i)) << 4;
+      final int loNibble = Util.hexToDecimal(input.charAt(i + 1));
       result[i / 2] = (byte) (hiNibble | loNibble);
     }
     return result;
   }
 
   /**
-   * @param hex
+   * @param input
    * @return
    * @throws IllegalArgumentException
    */
-  public static int hexToDecimal(final int hex) {
-    if ((hex >= '0') && (hex <= '9')) {
-      return hex - '0';
+  public static int hexToDecimal(final int input) {
+    if (('0' <= input) && (input <= '9')) {
+      return input - '0';
     }
-    if ((hex >= 'a') && (hex <= 'f')) {
-      return (hex - 'a') + 10;
+    if (('a' <= input) && (input <= 'f')) {
+      return (input - 'a') + 10;
     }
-    throw new IllegalArgumentException("invalid hex");
+    if (('A' <= input) && (input <= 'F')) {
+      return (input - 'A') + 10;
+    }
+    throw new IllegalArgumentException("input invalid");
   }
 
   /**
-   * @param data
+   * @param input
+   * @param multiplier
    * @return
+   * @throws NullPointerException
    * @throws IllegalArgumentException
+   * @throws ArithmeticException
    */
-  public static byte[] sha256d(final byte[]... data) {
-    Util.checkArgument(data != null);
+  public static String multiply(final String input, final int multiplier) {
+    Objects.requireNonNull(input, "input must not be null");
+    Util.check(0 <= multiplier, "multiplier invalid");
+    final var result = new StringBuilder(Math.multiplyExact(multiplier, input.length()));
+    for (int i = 0; i < multiplier; i++) {
+      result.append(input);
+    }
+    return result.toString();
+  }
+
+  /**
+   * @param input
+   * @return
+   * @throws NullPointerException
+   */
+  public static byte[] sha256d(final byte[]... input) {
+    Objects.requireNonNull(input, "input must not be null");
     try {
-      final MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-      for (final byte[] element : data) {
-        Util.checkArgument(element != null);
-        messageDigest.update(element);
+      final var sha256 = MessageDigest.getInstance("SHA-256");
+      for (final var element : input) {
+        Objects.requireNonNull(element, "element must not be null");
+        sha256.update(element);
       }
-      return messageDigest.digest(messageDigest.digest());
+      return sha256.digest(sha256.digest());
     } catch (final NoSuchAlgorithmException e) {
       throw new AssertionError("SHA-256 is a required algorithm");
     }
