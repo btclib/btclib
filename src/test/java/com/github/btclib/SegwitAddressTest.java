@@ -219,6 +219,9 @@ public class SegwitAddressTest {
     testVectors.put(new String[] { "bc", "bc1qx3x2gp02gsdftmlfq0x8xfd2qvplpguc4uu5kqv5jchn47l8e68qrgyhzz", }, new String[] { "0", "344ca405ea441a95efe903cc7325aa0303f0a398af394b0194962f3afbe7ce8e", "BECH32", "0020344ca405ea441a95efe903cc7325aa0303f0a398af394b0194962f3afbe7ce8e", });
     testVectors.put(new String[] { "bc", "bc1q6uu2meefq5yy88c7y5q8yheszg0ae3a49ldvyz7xkvqyflxwjmmqprh54p", }, new String[] { "0", "d738ade7290508439f1e2500725f30121fdcc7b52fdac20bc6b30044fcce96f6", "BECH32", "0020d738ade7290508439f1e2500725f30121fdcc7b52fdac20bc6b30044fcce96f6", });
     //
+    testVectors.put(new String[] { "bc", "bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9", }, new String[] { "1", "da4710964f7852695de2da025290e24af6d8c281de5a0b902b7135fd9fd74d21", "BECH32M", "5120da4710964f7852695de2da025290e24af6d8c281de5a0b902b7135fd9fd74d21", }); // BIP 86 p2tr P = 79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798, Q = da4710964f7852695de2da025290e24af6d8c281de5a0b902b7135fd9fd74d21
+    testVectors.put(new String[] { "bc", "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0", }, new String[] { "1", "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", "BECH32M", "512079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", }); // p2tr NOT BIP 86 for public key 79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
+    //
     for (final var entry : testVectors.entrySet()) {
       final String help = entry.getKey()[0] + "," + entry.getKey()[1];
       final String hrp = (entry.getKey()[0] == null) ? null : entry.getKey()[0];
@@ -358,6 +361,9 @@ public class SegwitAddressTest {
     testVectors.put(new String[] { "bc", "0", "d714cd9a28197a7a65cccd77a20938194fdc05910105459ae6a9715918c6c408", }, new String[] { "bc1q6u2vmx3gr9a85ewve4m6yzfcr98acpv3qyz5txhx49c4jxxxcsyqy9crte", "0020d714cd9a28197a7a65cccd77a20938194fdc05910105459ae6a9715918c6c408", "BECH32", });
     testVectors.put(new String[] { "bc", "0", "344ca405ea441a95efe903cc7325aa0303f0a398af394b0194962f3afbe7ce8e", }, new String[] { "bc1qx3x2gp02gsdftmlfq0x8xfd2qvplpguc4uu5kqv5jchn47l8e68qrgyhzz", "0020344ca405ea441a95efe903cc7325aa0303f0a398af394b0194962f3afbe7ce8e", "BECH32", });
     testVectors.put(new String[] { "bc", "0", "d738ade7290508439f1e2500725f30121fdcc7b52fdac20bc6b30044fcce96f6", }, new String[] { "bc1q6uu2meefq5yy88c7y5q8yheszg0ae3a49ldvyz7xkvqyflxwjmmqprh54p", "0020d738ade7290508439f1e2500725f30121fdcc7b52fdac20bc6b30044fcce96f6", "BECH32", });
+    //
+    testVectors.put(new String[] { "bc", "1", "da4710964f7852695de2da025290e24af6d8c281de5a0b902b7135fd9fd74d21", }, new String[] { "bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9", "5120da4710964f7852695de2da025290e24af6d8c281de5a0b902b7135fd9fd74d21", "BECH32M", }); // BIP 86 p2tr P = 79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798, Q = da4710964f7852695de2da025290e24af6d8c281de5a0b902b7135fd9fd74d21
+    testVectors.put(new String[] { "bc", "1", "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", }, new String[] { "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0", "512079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", "BECH32M", }); // p2tr NOT BIP 86 for public key 79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
     //
     for (final var entry : testVectors.entrySet()) {
       final String help = entry.getKey()[0] + "," + entry.getKey()[1] + "," + entry.getKey()[2];
